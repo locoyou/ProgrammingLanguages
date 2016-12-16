@@ -39,5 +39,14 @@ val test13 = ((officiate([(Clubs,Jack),(Spades,Num(8))],
                          42);
                false) 
               handle IllegalMove => true)
-             
-             
+
+val test14 = score_challenge ([(Hearts, Ace),(Hearts, Num 9)],23) = 1
+
+val test15 = officiate_challenge ([(Clubs,Ace),(Clubs,Ace),(Clubs,Ace),(Clubs,Ace)],
+                        [Draw,Draw,Draw,Draw],
+                        2)
+             = 1
+
+val test16 = careful_player ([(Clubs,Ace),(Clubs,Num 2),(Clubs,Ace)],22) = [Draw,Draw,Discard (Clubs,Num 2),Draw] 
+
+val test17 = careful_player ([(Clubs,Ace),(Clubs,Ace),(Clubs,Num 2)],22) = [Draw,Draw] 

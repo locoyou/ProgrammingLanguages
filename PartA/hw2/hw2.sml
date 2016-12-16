@@ -114,3 +114,75 @@ fun officiate(cards, moves, goal) =
 	in
 		officiate_helper(cards, moves, [], 0)
 	end
+
+fun small_card_value(s, r) =
+	case r of
+		Ace => 1
+	|	Num x => x
+	|	_ => 10
+
+fun small_sum_cards(cards) =
+	let
+		fun sum_cards_helper(cards, acc) = 
+			case cards of
+				[] => acc
+			|	x::xs => sum_cards_helper(xs, acc + small_card_value(x))
+	in
+		sum_cards_helper(cards, 0)
+	end
+
+fun score_challenge(cards, goal) =
+	let
+		val big_sum = sum_cards(cards)
+		val small_sum = small_sum_cards(cards)
+		val same_color = all_same_color(cards)
+		fun pscore(sum) =
+			if sum > goal then 3 * (sum - goal) else goal - sum
+		fun score_challenge_helper(sum) =
+			if small_sum >= sum orelse goal >= sum then pscore(sum) else Int.min(pscore(sum), score_challenge_helper(sum - 10))
+	in
+		if same_color then score_challenge_helper(big_sum) div 2 else score_challenge_helper(big_sum)
+	end
+
+fun officiate_challenge(cards, moves, goal) =
+	let
+		fun officiate_helper(cards, moves, held_cards, sum) = 
+			let 
+				val current_score = score_challenge(held_cards, goal)
+			in
+				if sum > goal
+				then current_score
+				else case moves of
+						[] => current_score
+					|	(Discard c)::ms => officiate_helper(cards, ms, remove_card(held_cards, c, IllegalMove), sum - small_card_value(c))
+					|	Draw::ms =>	case cards of
+									[] => current_score
+								|	c::cs => officiate_helper(cs, ms, c::held_cards, sum + small_card_value(c))
+			end
+	in
+		officiate_helper(cards, moves, [], 0)
+	end
+
+fun careful_player(cards, goal) =
+	let
+		fun find(cards, value) =
+			case cards of
+				[] => NONE
+			|	x::xs => if card_value(x) = value then SOME x else find(xs, value)
+		fun careful_player_helper(cards, held_cards, acc, sum) =
+			if goal - sum > 10 
+			then case cards of
+				[] => acc@[Draw]
+			|	x::xs => careful_player_helper(xs, x::held_cards, acc@[Draw], sum+card_value(x))
+			else if sum = goal
+			then acc
+			else case cards of
+				[] => acc
+			|	x::xs => case find(held_cards, sum + card_value(x) - goal) of
+						 	NONE => acc
+						 |  SOME c => acc@[Discard c, Draw]
+
+		
+	in
+		careful_player_helper(cards, [], [], 0)
+	end
