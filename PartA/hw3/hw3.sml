@@ -59,6 +59,42 @@ fun all_answers f lst =
 		all_answers_helper lst []
 	end
 
+val count_wildcards = g (fn _ => 1) (fn _ => 0)
+
+val count_wild_and_variable_lengths = g (fn _ => 1) (fn x => String.size x)
+
+fun count_some_var(s, p) = g (fn _ => 0) (fn x => if x = s then 1 else 0) p
+
+fun check_pat p =
+	let
+		fun distinct lst =
+			case lst of
+				[] => true
+			|	l::ls => not (List.exists (fn x => x = l) ls) andalso distinct ls
+		fun extract pt =
+			case pt of
+				Variable x => [x]
+            |	TupleP ps => List.foldl (fn (p1, p2) => p2 @ extract p1) [] ps
+            |	ConstructorP (_, ps) => extract ps
+            |	_ => []
+	in
+		distinct (extract p)
+	end
+
+fun match (v, p) =
+	case (v, p) of
+		(_, Wildcard) => SOME []
+	|	(vs, Variable ps) => SOME [(ps, vs)]
+	|	(Unit, UnitP) => SOME []
+	|	(Const vs, ConstP ps) => if vs = ps then SOME [] else NONE
+	|	(Tuple vs, TupleP ps) => if List.length vs <> List.length ps then NONE else all_answers match (ListPair.zip(vs, ps))
+	|	(Constructor(v1, v2), ConstructorP(p1, p2)) => if v1 = p1 then match(v2, p2) else NONE
+	|	_ => NONE
+
+fun first_match v ps =
+	SOME (first_answer(fn p => match(v, p)) ps)
+    handle NoAnswer => NONE
+
 (**** for the challenge problem only ****)
 
 datatype typ = Anything
