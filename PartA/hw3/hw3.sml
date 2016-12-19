@@ -104,3 +104,63 @@ datatype typ = Anything
 	     | Datatype of string
 
 (**** you can put all your code here ****)
+
+fun typecheck_patterns (ts, ps) =
+	let
+		fun type_list(f, ts) =
+			case ts of
+				[] => SOME []
+			|	(t1, t2)::ts' => case f(t1, t2) of
+									NONE => NONE
+								|	SOME x => case type_list(f, ts') of
+										NONE => NONE
+									|	SOME xs => SOME (x::xs)
+		fun lenient_type (t1, t2) =
+			case (t1, t2) of
+				(t, Anything) => SOME t
+			|	(Anything, t) => SOME t
+			|	(UnitT, UnitT) => SOME UnitT
+			|	(IntT, IntT) => SOME IntT
+			|	(TupleT ts1, TupleT ts2) => 
+					if List.length ts1 <> List.length ts2
+                    then NONE
+                    else (case type_list(lenient_type,(ListPair.zip (ts1, ts2))) of
+                        NONE => NONE
+                        | SOME ts => SOME (TupleT ts))
+			|	(Datatype ts1, Datatype ts2) => if ts1 = ts2 then (SOME (Datatype ts1)) else NONE
+            |	_ => NONE
+		fun find (s, t, ts) =
+			case ts of
+				[] => NONE
+			|	(s', x, t')::ts' => if s' = s 
+									then (case lenient_type(t, t') of
+											NONE => NONE
+										|	SOME z => SOME (Datatype x))
+									else find(s, t, ts')
+		fun pattern_type_list(f, ps) =
+			case ps of
+				[] => SOME []
+			|	p::ps' => case f(p) of
+							NONE => NONE
+						|	SOME x => case pattern_type_list(f, ps') of
+										NONE => NONE
+									|	SOME xs => SOME (x::xs)
+		fun pattern_type p =
+			case p of
+				Wildcard => SOME Anything
+		 	|	Variable _ => SOME Anything
+		 	|	UnitP => SOME UnitT
+		 	|	ConstP _ => SOME IntT
+		 	|	TupleP ps => (case pattern_type_list(pattern_type, ps) of
+		 						NONE => NONE
+		 					|	SOME tls => SOME (TupleT tls))
+		 	|	ConstructorP (s, pt) => (case pattern_type pt of
+		 									NONE => NONE
+		 								|	SOME t => find(s, t, ts))
+		 fun typecheck_patterns_helper(t1, t2) =
+		 	case (t1, t2) of
+		 		(SOME s1, SOME s2) => lenient_type(s1, s2)
+		 	|	_ => NONE
+	in
+		foldl (fn (p, t) => typecheck_patterns_helper(pattern_type(p), t)) (SOME Anything) ps
+	end
